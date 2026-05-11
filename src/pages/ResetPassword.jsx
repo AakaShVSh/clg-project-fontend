@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import API from "../api/apiBase";
-import authStyles from "../styles/authStyles";
+import authStyles from "../styles/AuthStyles";
 
 const EyeIcon = ({ open }) =>
   open ? (
