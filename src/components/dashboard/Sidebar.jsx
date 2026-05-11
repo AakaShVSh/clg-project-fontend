@@ -3,7 +3,7 @@ import { useApp } from "../../context/AppContext";
 import { AuthContext } from "../../context/AuthContext";
 import { initials, avatarBg, statusColor } from "../../styles/design";
 import CreateChannelModal from "../../modals/CreateChannelModal";
-import CreateGroupDMModal from "../../modals/CreateGroupDMModal";
+import CreateGroupDMModal from "../../modals/CreateGroupDmModal";
 
 const css = `
 .sidebar {
