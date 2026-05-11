@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/apiBase";
-import authStyles from "../styles/AuthStyles";
+import authStyles from "../styles/Authstyles";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
