@@ -3,7 +3,7 @@ import { useState, useRef, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import API from "../api/apiBase";
-import authStyles from "../styles/AuthStyles";
+import authStyles from "../styles/Authstyles";
 
 const OTP_LENGTH = 6;
 
