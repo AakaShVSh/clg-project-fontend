@@ -75,25 +75,34 @@
 //   );
 // };
 
+
+
 // src/context/AuthContext.jsx
-import { createContext, useEffect, useState } from "react";
+
+import { createContext, useEffect, useRef, useState } from "react";
 import API from "../api/apiBase";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user,        setUser]        = useState(null);
-  // authLoading = true while we are restoring session from localStorage.
-  // AppContext must wait for this to be false before firing any API calls,
-  // otherwise requests fire before the token is confirmed valid.
+  const [user, setUser] = useState(null);
+
+  // true only while restoring existing session
   const [authLoading, setAuthLoading] = useState(true);
+
+  // prevents double init in React StrictMode
+  const initialized = useRef(false);
 
   const normaliseUser = (data) => data?.user ?? data;
 
   const connectSocket = async (userId) => {
     try {
       const { default: socket } = await import("../socket");
-      if (!socket.connected) socket.connect();
+
+      if (!socket.connected) {
+        socket.connect();
+      }
+
       socket.emit("join", userId);
     } catch (_) {}
   };
@@ -105,66 +114,110 @@ export const AuthProvider = ({ children }) => {
     } catch (_) {}
   };
 
+  // LOGIN
   const login = async (responseData) => {
-    // 1. Persist token immediately so every subsequent request has it
-    if (responseData?.token) {
-      localStorage.setItem("token", responseData.token);
-    }
-
-    // 2. Use user from login response if present — avoids a redundant /auth/me
-    let u = normaliseUser(responseData);
-
-    // 3. Only hit /auth/me if the login response had no user identity fields
-    if (!u?._id && !u?.id) {
-      const res = await API.get("/auth/me");
-      u = normaliseUser(res.data);
-    }
-
-    setUser(u);
-    // authLoading was never true during login (it's a fresh login, not a restore)
-    await connectSocket(u._id || u.id);
-  };
-
-  const logout = async () => {
-    try { await API.post("/auth/logout"); } catch (_) {}
-    localStorage.removeItem("token");
-    setUser(null);
-    await disconnectSocket();
-  };
-
-  const logoutAll = async () => {
-    try { await API.post("/auth/logout-all"); } catch (_) {}
-    localStorage.removeItem("token");
-    setUser(null);
-    await disconnectSocket();
-  };
-
-  /* ── Boot: restore session from stored token ── */
-  useEffect(() => {
-    const init = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setAuthLoading(false); // no token → done immediately
-        return;
+    try {
+      // save token immediately
+      if (responseData?.token) {
+        localStorage.setItem("token", responseData.token);
       }
-      try {
+
+      let u = normaliseUser(responseData);
+
+      // fallback only if user missing
+      if (!u?._id && !u?.id) {
         const res = await API.get("/auth/me");
-        const u   = normaliseUser(res.data);
+        u = normaliseUser(res.data);
+      }
+
+      setUser(u);
+
+      await connectSocket(u._id || u.id);
+
+      return u;
+    } catch (err) {
+      localStorage.removeItem("token");
+      setUser(null);
+      throw err;
+    }
+  };
+
+  // LOGOUT
+  const logout = async () => {
+    try {
+      await API.post("/auth/logout");
+    } catch (_) {}
+
+    localStorage.removeItem("token");
+
+    setUser(null);
+
+    await disconnectSocket();
+  };
+
+  // LOGOUT ALL
+  const logoutAll = async () => {
+    try {
+      await API.post("/auth/logout-all");
+    } catch (_) {}
+
+    localStorage.removeItem("token");
+
+    setUser(null);
+
+    await disconnectSocket();
+  };
+
+  // RESTORE SESSION
+  useEffect(() => {
+    // stop React strict mode duplicate execution
+    if (initialized.current) return;
+
+    initialized.current = true;
+
+    const restoreSession = async () => {
+      try {
+        const token = localStorage.getItem("token");
+
+        // no token
+        if (!token) {
+          setAuthLoading(false);
+          return;
+        }
+
+        // validate token
+        const res = await API.get("/auth/me");
+
+        const u = normaliseUser(res.data);
+
         setUser(u);
+
         await connectSocket(u._id || u.id);
-      } catch {
-        // 401 / network error — token is bad, wipe it
+      } catch (err) {
+        console.error("Session restore failed:", err);
+
         localStorage.removeItem("token");
+
         setUser(null);
       } finally {
-        setAuthLoading(false); // always unblock AppContext
+        // VERY IMPORTANT
+        setAuthLoading(false);
       }
     };
-    init();
+
+    restoreSession();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, logoutAll, authLoading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        logoutAll,
+        authLoading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
