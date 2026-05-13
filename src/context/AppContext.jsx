@@ -1,12 +1,13 @@
 // src/context/AppContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { channelAPI, subgroupAPI, dmAPI, userAPI, messageAPI } from "../api/api";
-import { AuthContext } from "./AuthContext";
+import { useUser } from "../routes/ProtectedRoute";
 
 export const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  const { user, authLoading } = useContext(AuthContext);
+  // User comes from ProtectedRoute — guaranteed non-null inside protected tree.
+  const user = useUser();
 
   /* ── Navigation ── */
   const [view,             setView]             = useState("channel");
@@ -202,21 +203,20 @@ export function AppProvider({ children }) {
 
   const currentMembers = membersByChannel[activeChannelId] || [];
 
-  /* ─── Bootstrap ───────────────────────────────────────────────────────────
-     Wait for authLoading=false before firing any API calls.
-     Firing before auth resolves means the token may not be in localStorage,
-     which causes 401 "Invalid or expired token" on channels, users, dm, etc.
+  /* ─── Bootstrap ──────────────────────────────────────────────────────────────
+     AppProvider is only mounted inside <ProtectedRoute>, so by the time this
+     runs, the session check has already passed and `user` is guaranteed.
+     No authLoading gate needed — fire immediately.
   ─────────────────────────────────────────────────────────────────────────── */
   useEffect(() => {
-    if (authLoading || !user) return;
     loadChannels();
     userAPI.list().then(setCompanyUsers).catch(() => {});
     dmAPI.listDMs().then(setDMs).catch(() => {});
     dmAPI.listGroupDMs().then(setGroupDMs).catch(() => {});
-  }, [authLoading, user]); // eslint-disable-line
+  }, []); // eslint-disable-line
 
   useEffect(() => {
-    if (!activeChannelId || authLoading) return;
+    if (!activeChannelId) return;
     loadSubgroups(activeChannelId);
     loadMembers(activeChannelId);
     if (view === "channel") loadMessages("channel", activeChannelId);
@@ -239,6 +239,7 @@ export function AppProvider({ children }) {
       createChannel, createSubgroup,
       loadChannels, loadSubgroups, loadMembers,
       loadingChannels, error,
+      user,
     }}>
       {children}
     </AppContext.Provider>
