@@ -6,6 +6,7 @@ import ResetPassword  from "../pages/ResetPassword";
 import Verify2FA      from "../pages/Verify2FA";
 import Home           from "../pages/Home";
 import Dashboard      from "../pages/Dashboard";
+import TasksPage      from "../pages/TasksPage";
 import ProtectedRoute from "../ProtectedRoute";
 import { AppProvider } from "../context/AppContext";
 
@@ -27,6 +28,14 @@ const Main = () => {
           element={
             <AppProvider>
               <Dashboard />
+            </AppProvider>
+          }
+        />
+        <Route
+          path="/tasks"
+          element={
+            <AppProvider>
+              <TasksPage />
             </AppProvider>
           }
         />

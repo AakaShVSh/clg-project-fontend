@@ -4,7 +4,7 @@ import { AuthContext } from "../../context/AuthContext";
 import { initials, avatarBg, statusColor } from "../../styles/design";
 import CreateChannelModal from "../../modals/CreateChannelModal";
 import CreateGroupDMModal from "../../modals/CreateGroupDmModal";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const css = `
 .sidebar {
@@ -45,6 +45,44 @@ const css = `
   transition: color 0.15s, background 0.15s; flex-shrink: 0;
 }
 .sb-close-btn:hover { color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.05); }
+
+/* nav shortcuts */
+.sb-nav {
+  padding: 8px 8px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+.sb-nav-btn {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 7px 10px;
+  background: none; border: none; cursor: pointer;
+  border-radius: 7px; margin: 1px 0;
+  transition: background 0.12s; text-align: left;
+}
+.sb-nav-btn:hover { background: rgba(255,255,255,0.04); }
+.sb-nav-btn.active { background: rgba(200,165,110,0.09); }
+.sb-nav-icon {
+  width: 26px; height: 26px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.04); flex-shrink: 0;
+  color: rgba(255,255,255,0.3);
+  transition: color 0.15s, background 0.15s;
+}
+.sb-nav-btn.active .sb-nav-icon {
+  background: rgba(200,165,110,0.12);
+  color: rgba(200,165,110,0.8);
+}
+.sb-nav-btn:hover .sb-nav-icon {
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.55);
+}
+.sb-nav-label {
+  font-size: 12.5px; font-weight: 400;
+  color: rgba(255,255,255,0.38);
+  transition: color 0.12s;
+}
+.sb-nav-btn.active .sb-nav-label { color: rgba(255,255,255,0.82); font-weight: 500; }
+.sb-nav-btn:hover .sb-nav-label { color: rgba(255,255,255,0.6); }
 
 /* search */
 .sb-search {
@@ -205,6 +243,17 @@ const Plus = ({ size = 13 }) => (
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
   </svg>
 );
+const TasksIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M9 11l3 3L22 4"/>
+    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+  </svg>
+);
+const ChatIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+);
 
 export default function Sidebar({ collapsed, onClose }) {
   const { user, logout } = useContext(AuthContext);
@@ -215,6 +264,7 @@ export default function Sidebar({ collapsed, onClose }) {
     loadingChannels,
   } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const [expandedChannels, setExpandedChannels] = useState({});
   const [search, setSearch]                     = useState("");
   const [showCreateChannel, setShowCreateChannel] = useState(false);
@@ -233,6 +283,9 @@ export default function Sidebar({ collapsed, onClose }) {
     if (logout) logout();
     navigate("/login");
   };
+
+  const isOnTasks     = location.pathname === "/tasks";
+  const isOnDashboard = location.pathname === "/dashboard";
 
   const userInitials = initials(user?.name);
   const userBg       = avatarBg(user?.name || "");
@@ -254,6 +307,24 @@ export default function Sidebar({ collapsed, onClose }) {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
+          </button>
+        </div>
+
+        {/* ── Nav Shortcuts ── */}
+        <div className="sb-nav">
+          <button
+            className={`sb-nav-btn${isOnDashboard ? " active" : ""}`}
+            onClick={() => navigate("/dashboard")}
+          >
+            <span className="sb-nav-icon"><ChatIcon /></span>
+            <span className="sb-nav-label">Messages</span>
+          </button>
+          <button
+            className={`sb-nav-btn${isOnTasks ? " active" : ""}`}
+            onClick={() => navigate("/tasks")}
+          >
+            <span className="sb-nav-icon"><TasksIcon /></span>
+            <span className="sb-nav-label">Tasks</span>
           </button>
         </div>
 
