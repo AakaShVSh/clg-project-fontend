@@ -4,6 +4,7 @@ import { AuthContext } from "../../context/AuthContext";
 import { initials, avatarBg, statusColor } from "../../styles/design";
 import CreateChannelModal from "../../modals/CreateChannelModal";
 import CreateGroupDMModal from "../../modals/CreateGroupDmModal";
+import { useNavigate } from "react-router-dom";
 
 const css = `
 .sidebar {
@@ -213,7 +214,7 @@ export default function Sidebar({ collapsed, onClose }) {
     openChannel, openSubgroup, openDM, openGroupDM,
     loadingChannels,
   } = useApp();
-
+  const navigate = useNavigate();
   const [expandedChannels, setExpandedChannels] = useState({});
   const [search, setSearch]                     = useState("");
   const [showCreateChannel, setShowCreateChannel] = useState(false);
@@ -230,7 +231,7 @@ export default function Sidebar({ collapsed, onClose }) {
     try { await fetch("https://college-project-4t4q.onrender.com/api/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }); } catch (_) {}
     localStorage.removeItem("token");
     if (logout) logout();
-    window.location.href = "/login";
+    navigate("/login");
   };
 
   const userInitials = initials(user?.name);
