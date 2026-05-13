@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL || "https://college-project-4t4q.onrender.com";
+const BASE = import.meta.env.VITE_API_URL || "https://college-project-4t4q.onrender.com/api";
 
 export const apiFetch = async (path, options = {}) => {
   const token = localStorage.getItem("token");
