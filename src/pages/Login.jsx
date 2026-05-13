@@ -142,7 +142,7 @@ import { useContext, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import API from "../api/apiBase";
-import authStyles from "../styles/authStyles";
+import authStyles from "../styles/Authstyles";
 
 const EyeIcon = ({ open }) =>
   open ? (
