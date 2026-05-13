@@ -1,7 +1,7 @@
 // src/context/AppContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { channelAPI, subgroupAPI, dmAPI, userAPI, messageAPI } from "../api/api";
-import { useUser } from "../routes/ProtectedRoute";
+import { useUser } from "../ProtectedRoute";
 
 export const AppContext = createContext(null);
 
