@@ -1,7 +1,7 @@
 // src/routes/ProtectedRoute.jsx
 import { createContext, useContext, useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import API from "../api/apiBase";
+import API from "./api/apiBase";
 
 // ── User context ──────────────────────────────────────────────────────────────
 // A minimal context so any component in the protected tree can read the
