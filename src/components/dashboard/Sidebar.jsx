@@ -227,7 +227,7 @@ export default function Sidebar({ collapsed, onClose }) {
   );
 
   const handleLogout = async () => {
-    try { await fetch("http://localhost:5000/api/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }); } catch (_) {}
+    try { await fetch("https://college-project-4t4q.onrender.com/api/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }); } catch (_) {}
     localStorage.removeItem("token");
     if (logout) logout();
     window.location.href = "/login";
