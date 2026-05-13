@@ -6,7 +6,7 @@ import ResetPassword  from "../pages/ResetPassword";
 import Verify2FA      from "../pages/Verify2FA";
 import Home           from "../pages/Home";
 import Dashboard      from "../pages/Dashboard";
-import ProtectedRoute from "./ProtectedRoute";
+import ProtectedRoute from "../ProtectedRoute";
 import { AppProvider } from "../context/AppContext";
 
 const Main = () => {
