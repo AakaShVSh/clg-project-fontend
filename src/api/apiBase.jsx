@@ -22,7 +22,7 @@ API.interceptors.response.use(
       const authPages = ["/login", "/register", "/forgot-password", "/reset-password", "/verify-2fa"];
       const onAuthPage = authPages.some((p) => window.location.pathname.startsWith(p));
       if (!onAuthPage) {
-        window.location.href = "/login";
+        // window.location.href = "/login";
       }
     }
     return Promise.reject(error);
