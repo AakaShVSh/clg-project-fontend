@@ -75,7 +75,6 @@
 //   );
 // };
 
-
 // src/context/AuthContext.jsx
 import { createContext, useEffect, useState } from "react";
 import API from "../api/apiBase";
@@ -84,14 +83,11 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user,        setUser]        = useState(null);
+  // authLoading = true while we are restoring session from localStorage.
+  // AppContext must wait for this to be false before firing any API calls,
+  // otherwise requests fire before the token is confirmed valid.
   const [authLoading, setAuthLoading] = useState(true);
 
-  /* ── Normalise API response shape ──
-     Backend may return:
-       { token, user: {...} }   ← most common
-       { token, ...userFields } ← flat
-       { ...userFields }        ← /auth/me (no token field)
-  */
   const normaliseUser = (data) => data?.user ?? data;
 
   const connectSocket = async (userId) => {
@@ -109,24 +105,23 @@ export const AuthProvider = ({ children }) => {
     } catch (_) {}
   };
 
-  /* ── login ──
-     Called with the full POST /auth/login response body.
-     Saves the token FIRST, then extracts the user — no extra round-trip.
-  */
   const login = async (responseData) => {
+    // 1. Persist token immediately so every subsequent request has it
     if (responseData?.token) {
       localStorage.setItem("token", responseData.token);
     }
 
+    // 2. Use user from login response if present — avoids a redundant /auth/me
     let u = normaliseUser(responseData);
 
-    // Only hit /auth/me if the login response didn't include user identity fields
+    // 3. Only hit /auth/me if the login response had no user identity fields
     if (!u?._id && !u?.id) {
       const res = await API.get("/auth/me");
       u = normaliseUser(res.data);
     }
 
     setUser(u);
+    // authLoading was never true during login (it's a fresh login, not a restore)
     await connectSocket(u._id || u.id);
   };
 
@@ -144,20 +139,25 @@ export const AuthProvider = ({ children }) => {
     await disconnectSocket();
   };
 
-  /* ── Boot: restore session ── */
+  /* ── Boot: restore session from stored token ── */
   useEffect(() => {
     const init = async () => {
       const token = localStorage.getItem("token");
-      if (!token) { setAuthLoading(false); return; }
+      if (!token) {
+        setAuthLoading(false); // no token → done immediately
+        return;
+      }
       try {
         const res = await API.get("/auth/me");
         const u   = normaliseUser(res.data);
         setUser(u);
         await connectSocket(u._id || u.id);
       } catch {
+        // 401 / network error — token is bad, wipe it
+        localStorage.removeItem("token");
         setUser(null);
       } finally {
-        setAuthLoading(false);
+        setAuthLoading(false); // always unblock AppContext
       }
     };
     init();

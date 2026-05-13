@@ -6,7 +6,7 @@ import { AuthContext } from "./AuthContext";
 export const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  const { user } = useContext(AuthContext);
+  const { user, authLoading } = useContext(AuthContext);
 
   /* ── Navigation ── */
   const [view,             setView]             = useState("channel");
@@ -16,12 +16,12 @@ export function AppProvider({ children }) {
   const [activeGroupDMId,  setActiveGroupDMId]  = useState(null);
 
   /* ── Data ── */
-  const [channels,            setChannels]            = useState([]);
-  const [subgroupsByChannel,  setSubgroupsByChannel]  = useState({});
-  const [membersByChannel,    setMembersByChannel]    = useState({});
-  const [dms,                 setDMs]                 = useState([]);
-  const [groupDMs,            setGroupDMs]            = useState([]);
-  const [companyUsers,        setCompanyUsers]        = useState([]);
+  const [channels,           setChannels]           = useState([]);
+  const [subgroupsByChannel, setSubgroupsByChannel] = useState({});
+  const [membersByChannel,   setMembersByChannel]   = useState({});
+  const [dms,                setDMs]                = useState([]);
+  const [groupDMs,           setGroupDMs]           = useState([]);
+  const [companyUsers,       setCompanyUsers]       = useState([]);
 
   /* ── Messages cache ── */
   const [messages, setMessages] = useState({});
@@ -30,9 +30,6 @@ export function AppProvider({ children }) {
   const [loadingChannels, setLoadingChannels] = useState(true);
   const [error,           setError]           = useState(null);
 
-  const socketRef = useRef(null);
-
-  /* ─── Helpers ─── */
   const msgKey = (type, id) => `${type}:${id}`;
 
   /* ─── Load channels ─── */
@@ -41,12 +38,7 @@ export function AppProvider({ children }) {
       setLoadingChannels(true);
       const data = await channelAPI.list();
       setChannels(data);
-      // Auto-select first channel only if none already selected
-      setActiveChannelId((prev) => {
-        if (!prev && data.length > 0) return data[0]._id;
-        return prev;
-      });
-      setView((prev) => prev !== "channel" ? prev : "channel");
+      setActiveChannelId((prev) => (!prev && data.length > 0) ? data[0]._id : prev);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -55,12 +47,11 @@ export function AppProvider({ children }) {
   }, []);
 
   /* ─── Load subgroups ─── */
-  // Use a ref to avoid stale-closure issue with the cache check
   const subgroupsRef = useRef({});
   useEffect(() => { subgroupsRef.current = subgroupsByChannel; }, [subgroupsByChannel]);
 
   const loadSubgroups = useCallback(async (channelId) => {
-    if (subgroupsRef.current[channelId]) return; // already cached
+    if (subgroupsRef.current[channelId]) return;
     try {
       const data = await channelAPI.getSubgroups(channelId);
       setSubgroupsByChannel((prev) => ({ ...prev, [channelId]: data }));
@@ -81,7 +72,7 @@ export function AppProvider({ children }) {
 
   const loadMessages = useCallback(async (type, id) => {
     const key = msgKey(type, id);
-    if (messagesRef.current[key]) return; // cached
+    if (messagesRef.current[key]) return;
     try {
       let data;
       if (type === "dm" || type === "groupdm") {
@@ -97,7 +88,6 @@ export function AppProvider({ children }) {
   /* ─── Send message ─── */
   const sendMessage = useCallback(async (content, attachments = []) => {
     if (!content.trim() && !attachments.length) return;
-
     const key = view === "channel"  ? msgKey("channel",  activeChannelId)
               : view === "subgroup" ? msgKey("subgroup", activeSubgroupId)
               : view === "dm"       ? msgKey("dm",       activeDMId)
@@ -148,14 +138,12 @@ export function AppProvider({ children }) {
     });
   }, []);
 
-  /* ─── Create channel ─── */
   const createChannel = useCallback(async (body) => {
     const ch = await channelAPI.create(body);
     setChannels((prev) => [...prev, ch]);
     return ch;
   }, []);
 
-  /* ─── Create subgroup ─── */
   const createSubgroup = useCallback(async (body) => {
     const sg = await subgroupAPI.create(body);
     setSubgroupsByChannel((prev) => ({
@@ -165,7 +153,7 @@ export function AppProvider({ children }) {
     return sg;
   }, []);
 
-  /* ─── Navigation helpers ─── */
+  /* ─── Navigation ─── */
   const openChannel = useCallback((channelId) => {
     setActiveChannelId(channelId);
     setActiveSubgroupId(null);
@@ -198,7 +186,7 @@ export function AppProvider({ children }) {
     loadMessages("groupdm", groupDMId);
   }, [loadMessages]);
 
-  /* ─── Derived getters ─── */
+  /* ─── Derived ─── */
   const activeChannel  = channels.find((c) => c._id === activeChannelId) || null;
   const activeSubgroup = (subgroupsByChannel[activeChannelId] || []).find((s) => s._id === activeSubgroupId) || null;
   const activeDM       = dms.find((d) => d._id === activeDMId) || null;
@@ -214,18 +202,21 @@ export function AppProvider({ children }) {
 
   const currentMembers = membersByChannel[activeChannelId] || [];
 
-  /* ─── Bootstrap ─── */
+  /* ─── Bootstrap ───────────────────────────────────────────────────────────
+     Wait for authLoading=false before firing any API calls.
+     Firing before auth resolves means the token may not be in localStorage,
+     which causes 401 "Invalid or expired token" on channels, users, dm, etc.
+  ─────────────────────────────────────────────────────────────────────────── */
   useEffect(() => {
-    if (!user) return;
+    if (authLoading || !user) return;
     loadChannels();
     userAPI.list().then(setCompanyUsers).catch(() => {});
     dmAPI.listDMs().then(setDMs).catch(() => {});
     dmAPI.listGroupDMs().then(setGroupDMs).catch(() => {});
-  }, [user]);
+  }, [authLoading, user]); // eslint-disable-line
 
-  /* ─── Auto-load when active channel changes ─── */
   useEffect(() => {
-    if (!activeChannelId) return;
+    if (!activeChannelId || authLoading) return;
     loadSubgroups(activeChannelId);
     loadMembers(activeChannelId);
     if (view === "channel") loadMessages("channel", activeChannelId);
@@ -236,7 +227,6 @@ export function AppProvider({ children }) {
       view, activeChannelId, activeSubgroupId, activeDMId, activeGroupDMId,
       activeChannel, activeSubgroup, activeDM, activeGroupDM,
       openChannel, openSubgroup, openDM, openGroupDM,
-
       channels, setChannels,
       subgroupsByChannel, setSubgroupsByChannel,
       membersByChannel,
@@ -245,17 +235,10 @@ export function AppProvider({ children }) {
       companyUsers,
       currentMessages,
       currentMembers,
-
-      sendMessage,
-      appendMessage,
-      createChannel,
-      createSubgroup,
-      loadChannels,
-      loadSubgroups,
-      loadMembers,
-
-      loadingChannels,
-      error,
+      sendMessage, appendMessage,
+      createChannel, createSubgroup,
+      loadChannels, loadSubgroups, loadMembers,
+      loadingChannels, error,
     }}>
       {children}
     </AppContext.Provider>
