@@ -90,3 +90,34 @@ export const ticketAPI = {
   create: (body)   => apiFetch("/tickets", { method: "POST", body: JSON.stringify(body) }),
   update: (id, b)  => apiFetch(`/tickets/${id}`, { method: "PATCH", body: JSON.stringify(b) }),
 };
+
+/* ── Tasks ── */
+export const taskAPI = {
+  // List all tasks (supports query params: status, priority, assigneeId, channelId, page, limit, search, sortBy, sortOrder)
+  list:          (params = {}) => apiFetch(`/tasks?${new URLSearchParams(params)}`),
+
+  // Tasks assigned to the currently logged-in user, grouped by status
+  my:            ()            => apiFetch("/tasks/my"),
+
+  // Single task by ID (includes comments + history)
+  get:           (id)          => apiFetch(`/tasks/${id}`),
+
+  // Create a new task
+  create:        (body)        => apiFetch("/tasks", { method: "POST", body: JSON.stringify(body) }),
+
+  // Update editable fields: title, description, assignees, priority, dueDate, channelId
+  update:        (id, body)    => apiFetch(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+
+  // Transition task status (employee: pending→in_progress→submitted | superior: submitted→approved/rejected)
+  updateStatus:  (id, status)  => apiFetch(`/tasks/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+
+  // Delete task (creator or manager/admin only)
+  delete:        (id)          => apiFetch(`/tasks/${id}`, { method: "DELETE" }),
+
+  // Comments
+  addComment:    (id, content) => apiFetch(`/tasks/${id}/comments`, { method: "POST", body: JSON.stringify({ content }) }),
+  deleteComment: (id, cid)     => apiFetch(`/tasks/${id}/comments/${cid}`, { method: "DELETE" }),
+
+  // Full audit history for a task
+  history:       (id)          => apiFetch(`/tasks/${id}/history`),
+};
